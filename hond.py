@@ -21,13 +21,10 @@ args=parser.parse_args()
 interface=''
 if args.interface is not None:
     interface=''.join(args.interface)
-    print("interface {}".format(interface))
     default_interface=interface
 else:
     print("Using your system's preferred interface-->{}".format(default_interface))
 
-print("args interface {}".format(interface))
-#create the filter based on the port given in the cmd line
 filtered_ports= " or ".join([f"port {p}" for p in args.ports])
 bpf_filter=f"(tcp or udp) and ({filtered_ports})"
 
@@ -82,8 +79,8 @@ def process_packet(packet):
         print("Nothing for Bobby to sneuf")
 
 #Finding the default route interface of where the script is running
-print("Found default network interface as-->{}".format(default_interface))
-print("...Sniffing for packets on the default interface: {}".format(default_interface))
+print("Found network interface from command-line arguments as-->{}".format(default_interface))
+print("...Sniffing for packets on the given interface: {}".format(default_interface))
 print("...Using BPF_Filter -->{}".format(bpf_filter))
 #This is the call back approach for scapy 
 pkt=sniff(iface=default_interface,filter=bpf_filter,prn=process_packet)
