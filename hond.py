@@ -6,15 +6,35 @@ from scapy.all import *
 
 #(Interface,Destination,gateway)
 default_interface=conf.route.route("0.0.0.0")[0]
-print("default_interface in entry point {}".format(default_interface))
-parser=argparse.ArgumentParser(description="Sniff on what port? because the default is 10000")
+print("default_interface in entry point--> {}".format(default_interface))
+
+parser=argparse.ArgumentParser(description="Sniff on what port? because the default is 10000 and 6969")
+
 parser.add_argument('--ports',nargs='+'#accept 1 or more ports (args)
                     ,type=int,
                     default=[6969,10000] #default ports if none are provided (this is a toy)
-                    ,help='Defaults to sniffing port 10000')
+                    ,help='Defaults to sniffing port 6969 and 10000')
 parser.add_argument('--interface',nargs='+'#accpept 1 or more default_interfaces to sniff 
                     ,default=default_interface #detected by scapy 
                     ,help='Defaults to lo (Loopback) interface to sniff: pass an interface eg, wlon enp0s3')
+
+
+def parse_duration(value):
+#Handles unlimited sniffing time
+    if value.lower()=='unlimited':
+        print(f'TIMEOUT SET TO UNLIIMTED') #sniff allows for None to be set as timeout 
+        return None
+    try:
+        print(f'TIMEOUT SET TO {value}')
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'TIMEOUT value given is bogus or not "unlimited"')
+
+
+parser.add_argument("--timeout",nargs='?' #only accept 1 input for sniff time out
+                    ,type=parse_duration #calling the parse_duration function to handle this argument type
+                    ,default='10'
+                    ,help="Defaults to a timeout of 10 seconds unless a timeout is given or 'unlimited")
 args=parser.parse_args()
 
 #In the case of no network interface case given
@@ -28,7 +48,7 @@ else:
 filtered_ports= " or ".join([f"port {p}" for p in args.ports])
 bpf_filter=f"(tcp or udp) and ({filtered_ports})"
 
-
+#function to process packets for my use case. I don't need too much infomation
 def process_packet(packet):
     #There are Layers to the packet structure 
     if packet.haslayer(IP):
@@ -78,11 +98,12 @@ def process_packet(packet):
     else:
         print("Nothing for Bobby to sneuf")
 
+
 #Finding the default route interface of where the script is running
 print("Found network interface from command-line arguments as-->{}".format(default_interface))
 print("...Sniffing for packets on the given interface: {}".format(default_interface))
 print("...Using BPF_Filter -->{}".format(bpf_filter))
-#This is the call back approach for scapy 
-pkt=sniff(iface=default_interface,filter=bpf_filter,prn=process_packet)
+#This is the call back approach for scapy. We're calling back the "process_packet" method 
+pkt=sniff(iface=default_interface,filter=bpf_filter,prn=process_packet,timeout=args.timeout)
 
 
